@@ -83,6 +83,9 @@ try {
 }
 catch {
     $PROCESS_CHECKPOINT = $false
+    $ErrorMessage = $_.Exception.Message
+    Write-Host "[ERROR] $ErrorMessage" -ForegroundColor Red
+
 }
 
 if($PROCESS_CHECKPOINT) {
@@ -138,6 +141,8 @@ if($PROCESS_CHECKPOINT) {
         $SSLLabs_WebRequest_Json = Invoke-WebRequest -Uri $SSLLabs_analyze_final
     }
     catch {
+        $ErrorMessage = $_.Exception.Message
+        Write-Host "[ERROR] $ErrorMessage" -ForegroundColor Red
         break
     }
 
@@ -146,6 +151,8 @@ if($PROCESS_CHECKPOINT) {
         $SSLLabs_WebRequest_Converted = ConvertFrom-Json -InputObject $SSLLabs_WebRequest_Json.content
     }
     catch {
+        $ErrorMessage = $_.Exception.Message
+        Write-Host "[ERROR] $ErrorMessage" -ForegroundColor Red
         break
     }
 
@@ -168,6 +175,8 @@ if($PROCESS_CHECKPOINT) {
                 $SSLLabs_WebRequest_Json_temp = Invoke-WebRequest -Uri $SSLLabs_analyze_temp
             }
             catch {
+                $ErrorMessage = $_.Exception.Message
+                Write-Host "[ERROR] $ErrorMessage" -ForegroundColor Red
                 break
             }
 
@@ -175,6 +184,8 @@ if($PROCESS_CHECKPOINT) {
                 $SSLLabs_WebRequest_Converted_temp = ConvertFrom-Json -InputObject $SSLLabs_WebRequest_Json_temp.content
             }
             catch {
+                $ErrorMessage = $_.Exception.Message
+                Write-Host "[ERROR] $ErrorMessage" -ForegroundColor Red
                 break
             }
 
@@ -241,7 +252,7 @@ if($PROCESS_CHECKPOINT) {
             Write-Host "[INFO] Host:"$SSLLabs_WebRequest_Converted.host
             Write-Host "[INFO] IP Address:"$SSLLabs_Endpoint.ipAddress
             Write-Host "[INFO] Server Hostname:"$SSLLabs_Endpoint.serverName
-            Write-Host "[INFO] HTTP Server Signature:"$SSLLabsEndpoint.details.serverSignature
+            Write-Host "[INFO] HTTP Server Signature:"$SSLLabs_Endpoint.details.serverSignature
 
             Write-Host "`n"
             Write-Host "[INFO] Certificate"
@@ -272,7 +283,12 @@ if($PROCESS_CHECKPOINT) {
                 Write-Host "[INFO] Weak Key (Debian):"$SSLLabs_Endpoint.details.key.debianFlaw -ForegroundColor Red
             }
             Write-Host "[INFO] Issuer:"$SSLLabs_Endpoint.details.cert.issuerLabel
-            Write-Host "[INFO] Signature Algorithm:"$SSLLabs_Endpoint.details.cert.sigAlg
+            if($SSLLabs_Endpoint.details.cert.sigAlg -like "SHA1*"){
+                Write-Host "[INFO] Signature Algorithm:"$SSLLabs_Endpoint.details.cert.sigAlg -ForegroundColor Yellow
+            }
+            else {
+                Write-Host "[INFO] Signature Algorithm:"$SSLLabs_Endpoint.details.cert.sigAlg -ForegroundColor Green
+            }
             if($SSLLabs_Endpoint.details.cert.validationType -match "E") {
                 Write-Host "[INFO] Extended Validation: True" -ForegroundColor Green
             }
@@ -315,10 +331,25 @@ if($PROCESS_CHECKPOINT) {
                     Write-Host "[INFO] Pin SHA256:"$Certificate.pinSha256 -ForegroundColor Gray
                     Write-Host "[INFO] Issuer Label:"$Certificate.issuerLabel
                     Write-Host "[INFO] Issuer Subject:"$Certificate.issuerSubject
-                    Write-Host "[INFO] Signature Algorithm:"$Certificate.sigAlg
+                    if($Certificate.sigAlg -like "SHA1*") {
+                        Write-Host "[INFO] Signature Algorithm:"$Certificate.sigAlg -ForegroundColor Yellow
+                    }
+                    else {
+                        Write-Host "[INFO] Signature Algorithm:"$Certificate.sigAlg -ForegroundColor Green
+                    }
                     Write-Host "[INFO] Key Algorithm:"$Certificate.keyAlg
-                    Write-Host "[INFO] Key Size:"$Certificate.keySize
-                    Write-Host "[INFO] Key Strength:"$Certificate.keyStrength
+                    if($Certificate.keySize -ge 2048) {
+                        Write-Host "[INFO] Key Size:"$Certificate.keySize -ForegroundColor Green
+                    }
+                    else {
+                        Write-Host "[INFO] Key Size:"$Certificate.keySize -ForegroundColor Red
+                    }
+                    if($Certificate.keyStrength -ge 2048) {
+                        Write-Host "[INFO] Key Strength:"$Certificate.keyStrength -ForegroundColor Green
+                    }
+                    else {
+                        Write-Host "[INFO] Key Strength:"$Certificate.keyStrength -ForegroundColor Red
+                    }
                     if($Certificate.revocationStatus -eq 0) {
                         Write-Host "[INFO] Revocation Status: Not checked" -ForegroundColor Gray
                     }
@@ -401,7 +432,7 @@ if($PROCESS_CHECKPOINT) {
                 Write-Host "[INFO] BEAST attack:"$SSLLabs_Endpoint.details.vulnBeast -ForegroundColor Green
             }
             else {
-                Write-Host "[INFO] BEAST attack:"$SSLLabs_Endpoint.details.vulnBeast -ForegroundColor Red
+                Write-Host "[INFO] BEAST attack: Not mitigated server-side"
             }
             if($SSLLabs_Endpoint.details.poodle -eq $false) {
                 Write-Host "[INFO] Poodle (SSLv3) Vulnerable:"$SSLLabs_Endpoint.details.poodle -ForegroundColor Green
@@ -530,7 +561,7 @@ if($PROCESS_CHECKPOINT) {
             elseif($SSLLabs_Endpoint.details.dhUsesKnownPrimes -eq 2) {
                 Write-Host "[INFO] Uses common DH primes: Yes and they're weak" -ForegroundColor Red
             }
-            if($SSLLabs_Endpoint.details.dhYsReuse -eq $null) {
+            if(($SSLLabs_Endpoint.details.dhYsReuse -eq $null) -or ($SSLLabs_Endpoint.details.dhYsReuse -eq 0)) {
                 Write-Host "[INFO] DH public server param (Ys) reuse: False" -ForegroundColor Green
             }
             else {

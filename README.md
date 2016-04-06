@@ -6,7 +6,7 @@ You can use this script to bulk a list of servers or use it to automate your sec
 This project is still in beta status. Feel free to report any bugs or feature requests.
 
 
-###Parameters
+##Parameters
 
 Parameter: Hostname
 Type: String
@@ -39,6 +39,10 @@ Required: No
 
 ##Examples
 
+Use this function in your PowerShell script or import it like this:
+
+. .\Get-SSLReport.ps1
+
 Generate a report and show results on [Qualys SSL Labs](https://www.ssllabs.com/) startpage.
 Proceed the check also when the server certificate doesn't match the assessment hostname.
 
@@ -52,6 +56,13 @@ Proceed the check also when the server certificate doesn't match the assessment 
 Show also the certificate chain in the result.
 
 Get-SSLReport -Hostname www.letsencrypt.com -Publish $false -startNew $false -fromCache $true -maxAge 24 -ignoreMismatch $true -showChain $true
+
+
+##Coming soon
+
+* Save output to file
+* Send e-mail report
+* Customize colors with .xml file
 
 
 ##Credits
