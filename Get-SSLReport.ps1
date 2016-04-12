@@ -39,18 +39,28 @@ function Get-SSLReport {
     [boolean]
 
     -showChain "$true|$false"
+
+.PARAMETER dataOutput
+    [boolean]
+
+    -dataOutput "$true|$false"
       
 .EXAMPLE
     Get-SSLReport -Hostname www.letsencrypt.com -Publish $true -startNew $true -ignoreMismatch $true
              
 .EXAMPLE
     Get-SSLReport -Hostname www.letsencrypt.com -Publish $false -startNew $false -fromCache $true -maxAge 24 -ignoreMismatch $true -showChain $true
+
+.EXAMPLE
+    Use if you want to write the output to a var to work with it
+    $Output = Get-SSLReport -Hostname www.letsencrypt.com -Publish $false -startNew $false -fromCache $true -maxAge 24 -ignoreMismatch $true -showChain $true -dataOutput $true
              
 .NOTES
     Info      : Function to query SSLLabs
     Developer : Lukas Sassl
+    Twitter   : @JohnDoe_1987_
     Date      : 01.04.2016
-    Version   : 0.1 (Beta)
+    Version   : 0.2 (Beta)
 #>
     
 param(
@@ -60,7 +70,8 @@ param(
     [parameter(Mandatory=$false,Position=2)][boolean]$fromCache,
     [parameter(Mandatory=$false,Position=3)][int]$maxAge,
     [parameter(Mandatory=$false,Position=4)][boolean]$ignoreMismatch,
-    [parameter(Mandatory=$false,Position=5)][boolean]$showChain
+    [parameter(Mandatory=$false,Position=5)][boolean]$showChain,
+    [parameter(Mandatory=$false,Position=6)][boolean]$dataOutput
 )
 
 #Process checkpoint
@@ -213,13 +224,31 @@ if($PROCESS_CHECKPOINT) {
             Write-Host "[INFO] ------------------"
             Write-Host "[INFO]"
             if($SSLLabs_Endpoint.grade -like "A*") {
-                Write-Host "[INFO] Grade:"$SSLLabs_Endpoint.grade -ForegroundColor Green
+                if($SSLLabs_Endpoint.grade -match "T") {
+                    Write-Host "[INFO] No Trusted Issuer:"$SSLLabs_Endpoint.grade -ForegroundColor Green
+                    Write-Host "[INFO] Grade:"$SSLLabs_Endpoint.gradeTrustIgnored -ForegroundColor Green
+                }
+                else {
+                    Write-Host "[INFO] Grade:"$SSLLabs_Endpoint.grade -ForegroundColor Green
+                }
             }
             elseif(($SSLLabs_Endpoint.grade -like "B*") -or ($SSLLabs_Endpoint.grade -like "C*")) {
-                Write-Host "[INFO] Grade:"$SSLLabs_Endpoint.grade -ForegroundColor Yellow
+                if($SSLLabs_Endpoint.grade -match "T") {
+                    Write-Host "[INFO] No Trusted Issuer:"$SSLLabs_Endpoint.grade -ForegroundColor Yellow
+                    Write-Host "[INFO] Grade:"$SSLLabs_Endpoint.gradeTrustIgnored -ForegroundColor Yellow
+                }
+                else {
+                    Write-Host "[INFO] Grade:"$SSLLabs_Endpoint.grade -ForegroundColor Yellow
+                }
             }
             else {
-                Write-Host "[INFO] Grade:"$SSLLabs_Endpoint.grade -ForegroundColor Red
+                if($SSLLabs_Endpoint.grade -match "T") {
+                    Write-Host "[INFO] No Trusted Issuer:"$SSLLabs_Endpoint.grade -ForegroundColor Red
+                    Write-Host "[INFO] Grade:"$SSLLabs_Endpoint.gradeTrustIgnored -ForegroundColor Red
+                }
+                else {
+                    Write-Host "[INFO] Grade:"$SSLLabs_Endpoint.grade -ForegroundColor Red
+                }
             }
             if($SSLLabs_Endpoint.hasWarnings -ne $true) {
                 Write-Host "[INFO] Has Warnings:"$SSLLabs_Endpoint.hasWarnings -ForegroundColor Green
@@ -568,17 +597,27 @@ if($PROCESS_CHECKPOINT) {
                 Write-Host "[INFO] DH public server param (Ys) reuse: True" -ForegroundColor Red
             }
             Write-Host "`n"
+
+            $SSLLabsProperty = @{
+                status = $SSLLabs_WebRequest_Converted
+                endpoint = $SSLLabs_Endpoint
+            }
+
+            $Result = New-Object -TypeName PSObject -Property $SSLLabsProperty
+            [array]$Output += $Result
         }    
     }
     else {
         Write-Host "[ERROR] Your request timed out. Please try again later!" -ForegroundColor Red
         break
     }
+
 }
 else {
     Write-Host "[Error] SSLLabs API is currently not available!" -ForegroundColor Red
     break
 }
-
-
+if($dataOutput) {
+    return,$Output
+}
 }
